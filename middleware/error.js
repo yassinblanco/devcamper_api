@@ -1,10 +1,20 @@
+const ErrorResponse = require("../utils/errorResponse");
 const errorHandler = (err, req, res, next) => {
-	//Log to console for dev
-	console.log(err);
+	let error = { ...err };
+	error.message = err.message;
 
-	res.status(err.statusCode || 500).json({
+	//Log to console for dev
+	console.log(error.message);
+
+	//Mongoose bad ObjectId
+	if (error.name === "CastError") {
+		const message = `Bootcamp not found with the id of ${error.value}`;
+		error = new ErrorResponse(message, 404);
+	}
+
+	res.status(error.statusCode || 500).json({
 		success: false,
-		error: err.message || "Server Error"
+		error: error.message || "Server Error"
 	});
 };
 
