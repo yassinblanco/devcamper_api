@@ -30,11 +30,27 @@ exports.getBootcamp = asyncHandler(async (req, res, next) => {
 //@route POST /api/v1/bootcamps
 //@access Private
 exports.createBootcamp = asyncHandler(async (req, res, next) => {
+	//Add user to req.body
+	req.body.user = req.user.id;
+
+	//Check for published bootcamp
+	const publishedBootcamp = await Bootcamp.findOne({ user: req.user.id });
+
+	//If the user is not an admin he can only add one bootcamp
+	if (publishedBootcamp && req.user.role !== "admin") {
+		return next(
+			new ErrorResponse(
+				`The user ID ${req.user.id} has already published a bootcamp`,
+				400
+			)
+		);
+	}
+
 	const bootcamp = await Bootcamp.create(req.body);
 
 	res.status(201).json({
 		success: true,
-		data: bootcamp
+		data: bootcamp,
 	});
 });
 
@@ -44,7 +60,7 @@ exports.createBootcamp = asyncHandler(async (req, res, next) => {
 exports.updateBootcamp = asyncHandler(async (req, res, next) => {
 	const bootcamp = await Bootcamp.findByIdAndUpdate(req.params.id, req.body, {
 		new: true,
-		runValidators: true
+		runValidators: true,
 	});
 	if (!bootcamp) {
 		return next(
@@ -82,13 +98,13 @@ exports.getBootcampsInRadius = asyncHandler(async (req, res, next) => {
 	const radius = distance / 3963;
 
 	const bootcamps = await Bootcamp.find({
-		location: { $geoWithin: { $centerSphere: [[lng, lat], radius] } }
+		location: { $geoWithin: { $centerSphere: [[lng, lat], radius] } },
 	});
 
 	res.status(200).json({
 		success: true,
 		count: bootcamps.length,
-		data: bootcamps
+		data: bootcamps,
 	});
 });
 
@@ -127,7 +143,7 @@ exports.bootcampPhotoUpload = asyncHandler(async (req, res, next) => {
 	//Create custom filename
 	file.name = `photo_${bootcamp._id}${path.parse(file.name).ext}`;
 
-	file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async err => {
+	file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async (err) => {
 		if (err) {
 			console.error(err);
 			return next(new ErrorResponse(`Problem with file upload`, 500));
@@ -137,7 +153,7 @@ exports.bootcampPhotoUpload = asyncHandler(async (req, res, next) => {
 
 		res.status(200).json({
 			success: true,
-			data: file.name
+			data: file.name,
 		});
 	});
 });
